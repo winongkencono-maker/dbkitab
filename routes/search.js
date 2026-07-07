@@ -47,7 +47,7 @@ router.get('/semantic', async (req, res) => {
             WHERE title ILIKE $1 OR title_ltr ILIKE $1 OR search_keywords_ltr ILIKE $1
             LIMIT $2
         `;
-        const textPattern = \`%\${queryText}%\`;
+        const textPattern = `%${queryText}%`;
         const textResults = await db.query(textSearchSql, [textPattern, limit]);
 
         // 2. SEMANTIC SEARCH (Menggunakan AI Vector)

@@ -91,7 +91,7 @@ router.post('/register', async (req, res) => {
         // Store refresh token
         await db.query(
             'INSERT INTO user_sessions(user_id, refresh_token, ip_address) VALUES($1, $2, $3)',
-            [newUser.id, tokens.refreshToken, req.ip]
+            [newUser.id, tokens.refreshToken, req.ip || null]
         );
 
         sendSuccess(res, 201, 'Pendaftaran berhasil', {
@@ -160,7 +160,7 @@ router.post('/login', async (req, res) => {
 
         await db.query(
             'INSERT INTO user_sessions(user_id, refresh_token, ip_address) VALUES($1, $2, $3)',
-            [user.id, tokens.refreshToken, req.ip]
+            [user.id, tokens.refreshToken, req.ip || null]
         );
 
         sendSuccess(res, 200, 'Login berhasil', {
@@ -243,7 +243,7 @@ router.post('/google', async (req, res) => {
 
         await db.query(
             'INSERT INTO user_sessions(user_id, refresh_token, ip_address) VALUES($1, $2, $3)',
-            [user.id, tokens.refreshToken, req.ip]
+            [user.id, tokens.refreshToken, req.ip || null]
         );
 
         sendSuccess(res, 200, 'Google Login berhasil', {

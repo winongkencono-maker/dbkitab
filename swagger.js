@@ -11,10 +11,19 @@ const options = {
     },
     servers: [
       {
-        url: '/',
-        description: 'Current server',
+        url: 'http://localhost:8081',
+        description: 'Development server',
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        }
+      }
+    }
   },
   // Paths to files containing OpenAPI definitions
   apis: ['./routes/*.js'],

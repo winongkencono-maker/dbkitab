@@ -8,8 +8,8 @@ const { sendSuccess, sendError } = require('../utils/response');
  * @swagger
  * /api/search/semantic:
  *   get:
- *     summary: Semantic Search
- *     description: Cari buku berdasarkan makna atau konteks kalimat menggunakan AI embeddings.
+ *     summary: Semantic & Keyword Search (Hybrid)
+ *     description: Cari buku berdasarkan judul, kata kunci, atau makna kalimat (Hybrid Search).
  *     tags: [Search]
  *     parameters:
  *       - in: query
@@ -39,34 +39,48 @@ router.get('/semantic', async (req, res) => {
             return sendError(res, 400, 'Parameter "q" diperlukan untuk pencarian');
         }
 
+        // 1. TEXT SEARCH (Prioritas Utama untuk Judul/Keyword persis)
+        const textSearchSql = `
+            SELECT id, title, title_ltr, author_id, category_id,
+                   1.0 AS similarity_score, 'text_match' AS match_type
+            FROM books
+            WHERE title ILIKE $1 OR title_ltr ILIKE $1 OR search_keywords_ltr ILIKE $1
+            LIMIT $2
+        `;
+        const textPattern = \`%\${queryText}%\`;
+        const textResults = await db.query(textSearchSql, [textPattern, limit]);
+
+        // 2. SEMANTIC SEARCH (Menggunakan AI Vector)
         console.log(`Generating embedding for query: "${queryText}"`);
         const queryVector = await getEmbedding(queryText);
-        
-        // Convert to Postgres vector array string format: '[0.1, 0.2, ...]'
         const vectorStr = `[${queryVector.join(',')}]`;
 
-        // Search database using Cosine Distance <=>
-        const searchSql = `
+        const semanticSearchSql = `
             SELECT id, title, title_ltr, author_id, category_id,
-                   1 - (embedding <=> $1::vector) AS similarity_score
+                   1 - (embedding <=> $1::vector) AS similarity_score, 'semantic_match' AS match_type
             FROM books
             WHERE embedding IS NOT NULL
             ORDER BY embedding <=> $1::vector
             LIMIT $2
         `;
+        const semanticResults = await db.query(semanticSearchSql, [vectorStr, limit]);
 
-        const { rows } = await db.query(searchSql, [vectorStr, limit]);
+        // 3. GABUNGKAN & HILANGKAN DUPLIKAT
+        const combinedResults = [...textResults.rows];
+        const existingIds = new Set(combinedResults.map(r => r.id));
 
-        const mappedResults = rows.map(row => ({
-            id: row.id,
-            title: row.title,
-            title_ltr: row.title_ltr,
-            author_id: row.author_id,
-            category_id: row.category_id,
-            similarity_score: row.similarity_score
-        }));
+        for (const row of semanticResults.rows) {
+            if (!existingIds.has(row.id)) {
+                combinedResults.push(row);
+                existingIds.add(row.id);
+            }
+        }
 
-        sendSuccess(res, 200, 'Berhasil menemukan hasil pencarian semantik', mappedResults);
+        // Urutkan berdasarkan similarity_score dan limit hasilnya
+        combinedResults.sort((a, b) => b.similarity_score - a.similarity_score);
+        const finalResults = combinedResults.slice(0, limit);
+
+        sendSuccess(res, 200, 'Berhasil menemukan hasil pencarian', finalResults);
 
     } catch (err) {
         console.error(err);

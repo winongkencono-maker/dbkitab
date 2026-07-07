@@ -11,8 +11,8 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:8081',
-        description: 'Development server',
+        url: '/',
+        description: 'Current server',
       },
     ],
   },

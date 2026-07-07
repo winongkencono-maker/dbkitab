@@ -89,9 +89,10 @@ router.post('/register', async (req, res) => {
         const tokens = generateTokens(newUser);
 
         // Store refresh token
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         await db.query(
-            'INSERT INTO user_sessions(user_id, refresh_token, ip_address) VALUES($1, $2, $3)',
-            [newUser.id, tokens.refreshToken, req.ip || null]
+            'INSERT INTO user_sessions(user_id, refresh_token, ip_address, expires_at) VALUES($1, $2, $3, $4)',
+            [newUser.id, tokens.refreshToken, req.ip || null, expiresAt]
         );
 
         sendSuccess(res, 201, 'Pendaftaran berhasil', {
@@ -158,9 +159,10 @@ router.post('/login', async (req, res) => {
 
         const tokens = generateTokens(user);
 
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         await db.query(
-            'INSERT INTO user_sessions(user_id, refresh_token, ip_address) VALUES($1, $2, $3)',
-            [user.id, tokens.refreshToken, req.ip || null]
+            'INSERT INTO user_sessions(user_id, refresh_token, ip_address, expires_at) VALUES($1, $2, $3, $4)',
+            [user.id, tokens.refreshToken, req.ip || null, expiresAt]
         );
 
         sendSuccess(res, 200, 'Login berhasil', {
@@ -241,9 +243,10 @@ router.post('/google', async (req, res) => {
 
         const tokens = generateTokens(user);
 
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         await db.query(
-            'INSERT INTO user_sessions(user_id, refresh_token, ip_address) VALUES($1, $2, $3)',
-            [user.id, tokens.refreshToken, req.ip || null]
+            'INSERT INTO user_sessions(user_id, refresh_token, ip_address, expires_at) VALUES($1, $2, $3, $4)',
+            [user.id, tokens.refreshToken, req.ip || null, expiresAt]
         );
 
         sendSuccess(res, 200, 'Google Login berhasil', {

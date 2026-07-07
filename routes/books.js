@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const offset = (page - 1) * limit;
         
-        let query = 'SELECT id, title, title_ltr, author_id, category_id, pages_count, volumes_count, rating FROM books WHERE 1=1';
+        let query = 'SELECT id, title, title_ltr, author_id, category_id, pages_count, volumes_count, rating, source_type, original_id, cover_image_path FROM books WHERE 1=1';
         const params = [];
         let paramIndex = 1;
 

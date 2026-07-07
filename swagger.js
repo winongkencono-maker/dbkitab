@@ -11,8 +11,8 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:8081',
-        description: 'Development server',
+        url: 'http://43.134.134.169:8081',
+        description: 'aaPanel Server',
       },
     ],
     components: {

@@ -30,6 +30,7 @@
     "midtrans-client": "^1.4.3",
     "nodemailer": "^9.0.3",
     "pg": "^8.22.0",
+    "ssh2": "^1.17.0",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1"
   }

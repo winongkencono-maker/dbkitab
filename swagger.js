@@ -11,8 +11,8 @@ const options = {
     },
     servers: [
       {
-        url: 'http://43.134.134.169:8081',
-        description: 'aaPanel Server',
+        url: 'https://ebook.sarungtambalan.my.id',
+        description: 'Production Server (Cloudflare Tunnel)',
       },
     ],
     components: {

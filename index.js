@@ -9,6 +9,7 @@ const categoriesRouter = require('./routes/categories');
 const searchRouter = require('./routes/search');
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
+const readerRouter = require('./routes/reader');
 const setupSwagger = require('./swagger');
 
 const app = express();
@@ -27,6 +28,7 @@ app.use('/api/categories', categoriesRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/reader', readerRouter);
 
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to dbkitab REST API' });

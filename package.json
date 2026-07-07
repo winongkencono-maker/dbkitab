@@ -20,6 +20,7 @@
   "homepage": "https://github.com/winongkencono-maker/dbkitab#readme",
   "dependencies": {
     "@xenova/transformers": "^2.16.0",
+    "axios": "^1.18.1",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

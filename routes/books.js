@@ -96,6 +96,126 @@ router.get('/', async (req, res) => {
     }
 });
 
+const axios = require('axios');
+const SHAMELA_BASE_URL = 'https://winongkencono-samela.hf.space';
+
+/**
+ * @swagger
+ * /api/books/shamela:
+ *   get:
+ *     summary: Search Shamela Books
+ *     tags: [Books (Shamela)]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Keyword pencarian
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Berhasil mendapatkan buku dari Shamela
+ */
+router.get('/shamela', async (req, res) => {
+    try {
+        const response = await axios.get(`${SHAMELA_BASE_URL}/api/books`, { params: req.query });
+        sendSuccess(res, 200, 'Berhasil dari Shamela', response.data);
+    } catch (err) {
+        console.error('Shamela Search Error:', err.message);
+        sendError(res, 500, 'Gagal terhubung ke Shamela API');
+    }
+});
+
+/**
+ * @swagger
+ * /api/books/shamela/{id}:
+ *   get:
+ *     summary: Get Shamela Book Detail & Auto-Sync
+ *     tags: [Books (Shamela)]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Detail kitab Shamela
+ */
+router.get('/shamela/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const response = await axios.get(`${SHAMELA_BASE_URL}/api/books/${id}`);
+        const bookData = response.data;
+        
+        if (!bookData) {
+            return sendError(res, 404, 'Kitab Shamela tidak ditemukan');
+        }
+
+        // Auto-sync ke tabel lokal (Stub)
+        const localBookId = `shamela-${id}`;
+        const title = bookData.title || `Kitab Shamela ${id}`;
+        const authorId = bookData.author?.id ? `shamela-author-${bookData.author.id}` : null;
+        
+        await db.query(`
+            INSERT INTO books (id, title, source_type, original_id, pages_count, author_id)
+            VALUES ($1, $2, 'shamela', $3, $4, $5)
+            ON CONFLICT (id) DO NOTHING
+        `, [localBookId, title, id, bookData.pages_count || null, authorId]);
+
+        sendSuccess(res, 200, 'Berhasil dari Shamela', bookData);
+    } catch (err) {
+        console.error('Shamela Detail Error:', err.message);
+        sendError(res, 500, 'Gagal terhubung ke Shamela API');
+    }
+});
+
+/**
+ * @swagger
+ * /api/books/shamela/{id}/pages:
+ *   get:
+ *     summary: Get Shamela Book Pages
+ *     tags: [Books (Shamela)]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Halaman dari Shamela
+ */
+router.get('/shamela/:id/pages', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const response = await axios.get(`${SHAMELA_BASE_URL}/api/books/${id}/pages`, { params: req.query });
+        sendSuccess(res, 200, 'Berhasil dari Shamela', response.data);
+    } catch (err) {
+        console.error('Shamela Pages Error:', err.message);
+        sendError(res, 500, 'Gagal terhubung ke Shamela API');
+    }
+});
+
 /**
  * @swagger
  * /api/books/{id}:

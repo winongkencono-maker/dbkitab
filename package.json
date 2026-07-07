@@ -1,0 +1,24 @@
+{
+  "name": "dbkitab",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/winongkencono-maker/dbkitab.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/winongkencono-maker/dbkitab/issues"
+  },
+  "homepage": "https://github.com/winongkencono-maker/dbkitab#readme",
+  "dependencies": {
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
+  }
+}

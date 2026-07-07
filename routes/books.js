@@ -238,7 +238,16 @@ router.get('/shamela/:id/pages', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
     try {
-        const { rows } = await db.query('SELECT id, title, title_ltr, author_id, category_id, pages_count, volumes_count, rating, description, description_ltr, main_topics, cover_image_path FROM books WHERE id = $1', [req.params.id]);
+        const query = `
+            SELECT b.id, b.title, b.title_ltr, b.author_id, b.category_id, b.pages_count, 
+                   b.volumes_count, b.rating, b.description, b.description_ltr, b.main_topics, 
+                   b.cover_image_path, b.source_type, b.original_id,
+                   bs.pdf_url, bs.external_download_url, bs.api_base_url
+            FROM books b
+            LEFT JOIN book_sources bs ON b.id = bs.book_id
+            WHERE b.id = $1
+        `;
+        const { rows } = await db.query(query, [req.params.id]);
         
         if (rows.length === 0) {
             return sendError(res, 404, 'Kitab tidak ditemukan');

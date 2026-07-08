@@ -8,8 +8,8 @@ const util = require('util');
 
 const execAsync = util.promisify(exec);
 
-// Batas concurrency / parallel download & extract (ubah jika perlu)
-const CONCURRENCY_LIMIT = 5;
+// Batas concurrency diturunkan agar tidak Out Of Memory (OOM) di VPS
+const CONCURRENCY_LIMIT = 2;
 
 const pool = new Pool({
     user: process.env.PGUSER,
@@ -72,13 +72,18 @@ async function downloadFile(url, outputPath) {
     });
 }
 
+// Tracking progress
+let totalProcessed = 0;
+let totalBooks = 0;
+
 // Proses 1 buku
 async function processBook(book) {
     const bookId = book.id;
     const pdfUrl = book.pdf_url || book.external_download_url;
     
     if (!pdfUrl) {
-        console.log(`[SKIP] Buku ${bookId} tidak memiliki PDF URL.`);
+        totalProcessed++;
+        console.log(`[${totalProcessed}/${totalBooks}] [SKIP] Buku ${bookId} tidak memiliki PDF URL.`);
         return false;
     }
 
@@ -89,10 +94,10 @@ async function processBook(book) {
     const finalDbUrl = `/public/uploads/covers/${bookId}-1.jpg`;
 
     try {
-        console.log(`[PROSES] Buku ${bookId} -> Mengunduh PDF...`);
+        console.log(`[${totalProcessed + 1}/${totalBooks}] [PROSES] Buku ${bookId} -> Mengunduh PDF...`);
         await downloadFile(pdfUrl, tmpPdfPath);
 
-        console.log(`[PROSES] Buku ${bookId} -> Ekstrak Halaman 1...`);
+        console.log(`[${totalProcessed + 1}/${totalBooks}] [PROSES] Buku ${bookId} -> Ekstrak Halaman 1...`);
         // Command pdftoppm: -f 1 (halaman pertama), -l 1 (sampai halaman 1), -jpeg (format jpg)
         // Resolusi bisa ditambah -r 150 atau dibiarkan default
         const cmd = `pdftoppm -f 1 -l 1 -jpeg -scale-to 800 "${tmpPdfPath}" "${outPrefix}"`;
@@ -122,6 +127,7 @@ async function processBook(book) {
         if (fs.existsSync(tmpPdfPath)) {
             try { fs.unlinkSync(tmpPdfPath); } catch(e){}
         }
+        totalProcessed++;
     }
     
     return true;
@@ -140,7 +146,10 @@ async function run() {
         `;
         
         const { rows } = await pool.query(query);
-        console.log(`Ditemukan ${rows.length} buku yang membutuhkan cover.`);
+        totalBooks = rows.length;
+        totalProcessed = 0;
+        
+        console.log(`Ditemukan ${totalBooks} buku yang membutuhkan cover.`);
 
         if (rows.length === 0) {
             console.log('Tidak ada yang perlu diproses.');

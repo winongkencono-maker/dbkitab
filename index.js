@@ -28,6 +28,9 @@ const port = process.env.PORT || 8081;
 app.use(cors());
 app.use(express.json());
 
+// Serve static files (covers, uploads)
+app.use('/public', express.static('public'));
+
 // Setup Swagger UI
 setupSwagger(app);
 

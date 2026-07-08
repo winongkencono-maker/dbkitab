@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const midtransClient = require('midtrans-client');
 const { v4: uuidv4 } = require('uuid');
-const db = require('../db');
+const db = require('../config/db');
 const { verifyToken } = require('../middleware/auth');
 const { sendSuccess, sendError } = require('../utils/response');
 
@@ -19,12 +19,12 @@ const snap = new midtransClient.Snap({
 const PLANS = {
     'premium-1-month': {
         name: 'Premium 1 Bulan',
-        price: 25000,
+        price: 2500,
         durationDays: 30
     },
     'premium-1-year': {
         name: 'Premium 1 Tahun',
-        price: 250000,
+        price: 25000,
         durationDays: 365
     }
 };

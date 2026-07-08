@@ -54,7 +54,7 @@ async function downloadFile(url, outputPath) {
         url,
         method: 'GET',
         responseType: 'stream',
-        timeout: 30000 // 30 detik timeout
+        timeout: 300000 // 5 menit timeout
     });
 
     return new Promise((resolve, reject) => {

@@ -52,9 +52,13 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         const newUser = await db.query(
-            'INSERT INTO users (name, email, password_hash, phone) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
-            [name, email, hashedPassword, phone]
+            'INSERT INTO users (full_name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, full_name, email, role',
+            [name, email, hashedPassword]
         );
+
+        if (phone) {
+            await db.query('INSERT INTO user_profiles (user_id, phone_number) VALUES ($1, $2)', [newUser.rows[0].id, phone]);
+        }
 
         res.status(201).json({
             success: true,
@@ -126,7 +130,7 @@ router.post('/login', async (req, res) => {
                 token,
                 user: {
                     id: user.id,
-                    name: user.name,
+                    name: user.full_name,
                     email: user.email,
                     role: user.role
                 }
@@ -152,7 +156,11 @@ router.post('/login', async (req, res) => {
  */
 router.get('/me', auth, async (req, res) => {
     try {
-        const userResult = await db.query('SELECT id, name, email, phone, role, created_at FROM users WHERE id = $1', [req.user.id]);
+        const userResult = await db.query(`
+            SELECT u.id, u.full_name, u.email, u.role, u.created_at, p.phone_number as phone
+            FROM users u LEFT JOIN user_profiles p ON u.id = p.user_id
+            WHERE u.id = $1
+        `, [req.user.id]);
         
         if (userResult.rows.length === 0) {
             return sendError(res, 404, 'User tidak ditemukan.');

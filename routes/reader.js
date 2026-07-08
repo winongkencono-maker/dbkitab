@@ -382,11 +382,11 @@ router.post('/highlights/:bookId', authenticateToken, async (req, res) => {
         const { highlighted_text, color_hex, start_position, end_position, page_number } = req.body;
         
         const sql = `
-            INSERT INTO highlights (user_id, book_id, highlighted_text, color_hex, start_position, end_position, page_number)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO highlights (user_id, book_id, highlighted_text, color_hex, start_position, end_position)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
-        const { rows } = await db.query(sql, [userId, bookId, highlighted_text, color_hex, start_position, end_position, page_number]);
+        const { rows } = await db.query(sql, [userId, bookId, highlighted_text, color_hex, start_position, end_position]);
         sendSuccess(res, 201, 'Berhasil menambahkan highlight', rows[0]);
     } catch (err) {
         console.error('Highlights POST error:', err);

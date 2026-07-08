@@ -3,7 +3,7 @@ const router = express.Router();
 const midtransClient = require('midtrans-client');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/db');
-const { verifyToken } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const { sendSuccess, sendError } = require('../utils/response');
 
 // Midtrans Core API & Snap Setup
@@ -51,7 +51,7 @@ const PLANS = {
  *       200:
  *         description: Berhasil mendapatkan token pembayaran
  */
-router.post('/checkout', verifyToken, async (req, res) => {
+router.post('/checkout', authenticateToken, async (req, res) => {
     try {
         const { plan_id } = req.body;
         const userId = req.user.id;
@@ -206,7 +206,7 @@ router.post('/webhook', express.json(), async (req, res) => {
  *       200:
  *         description: Berhasil
  */
-router.get('/status', verifyToken, async (req, res) => {
+router.get('/status', authenticateToken, async (req, res) => {
     try {
         const { rows } = await db.query(`
             SELECT status, current_period_start, current_period_end, plan_id 

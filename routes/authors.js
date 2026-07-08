@@ -86,7 +86,15 @@ router.get('/:id', async (req, res) => {
             return sendError(res, 404, 'Pengarang tidak ditemukan');
         }
         
-        sendSuccess(res, 200, 'Berhasil mengambil detail pengarang', rows[0]);
+        const author = rows[0];
+        
+        // Ambil daftar kitab karangan author ini
+        const booksResult = await db.query('SELECT id, title, title_ltr, category_id, pages_count, volumes_count, cover_image_path, source_type, original_id FROM books WHERE author_id = $1 ORDER BY title ASC', [req.params.id]);
+        
+        author.total_books = booksResult.rows.length;
+        author.books = booksResult.rows;
+
+        sendSuccess(res, 200, 'Berhasil mengambil detail pengarang', author);
     } catch (err) {
         console.error(err);
         sendError(res, 500, 'Terjadi kesalahan pada server');

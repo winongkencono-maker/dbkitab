@@ -1,0 +1,21 @@
+require('dotenv').config();
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+(async () => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'books';
+        `);
+        console.log(rows);
+    } catch (e) {
+        console.error(e.message);
+    } finally {
+        pool.end();
+    }
+})();

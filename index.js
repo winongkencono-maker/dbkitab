@@ -11,6 +11,15 @@ const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const readerRouter = require('./routes/reader');
 const subscriptionsRouter = require('./routes/subscriptions');
+const productsRouter = require('./routes/products');
+const cartRouter = require('./routes/cart');
+const ordersRouter = require('./routes/orders');
+
+const adminProductsRouter = require('./routes/admin/products');
+const adminOrdersRouter = require('./routes/admin/orders');
+const adminShipmentsRouter = require('./routes/admin/shipments');
+const adminStatsRouter = require('./routes/admin/stats');
+
 const setupSwagger = require('./swagger');
 
 const app = express();
@@ -31,6 +40,14 @@ app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/reader', readerRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
+app.use('/api/products', productsRouter);
+app.use('/api/cart', cartRouter);
+app.use('/api/orders', ordersRouter);
+
+app.use('/api/admin/products', adminProductsRouter);
+app.use('/api/admin/orders', adminOrdersRouter);
+app.use('/api/admin/shipments', adminShipmentsRouter);
+app.use('/api/admin/stats', adminStatsRouter);
 
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to dbkitab REST API' });

@@ -4,30 +4,13 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 const { sendSuccess, sendError } = require('../utils/response');
-const { OAuth2Client } = require('google-auth-library');
-
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-// Helper function to generate JWT
-const generateTokens = (user) => {
-    const payload = { id: user.id, email: user.email, role: user.role };
-    
-    const accessToken = jwt.sign(payload, process.env.JWT_SECRET || 'secret123', {
-        expiresIn: process.env.JWT_EXPIRES_IN || '1d',
-    });
-    
-    const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET || 'refresh_secret123', {
-        expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-    });
-    
-    return { accessToken, refreshToken };
-};
+const auth = require('../middleware/auth');
 
 /**
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Register a new user
+ *     summary: Registrasi pelanggan baru
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -36,74 +19,52 @@ const generateTokens = (user) => {
  *           schema:
  *             type: object
  *             required:
+ *               - name
  *               - email
  *               - password
- *               - full_name
  *             properties:
+ *               name:
+ *                 type: string
  *               email:
  *                 type: string
  *               password:
  *                 type: string
- *               full_name:
+ *               phone:
  *                 type: string
  *     responses:
  *       201:
- *         description: User registered successfully
- *       400:
- *         description: Invalid input or email already exists
+ *         description: Berhasil registrasi
  */
 router.post('/register', async (req, res) => {
-    const { email, password, full_name } = req.body;
-
-    if (!email || !password || !full_name) {
-        return sendError(res, 400, 'Email, password, dan nama lengkap wajib diisi');
+    const { name, email, password, phone } = req.body;
+    
+    if (!name || !email || !password) {
+        return sendError(res, 400, 'Nama, email, dan password wajib diisi.');
     }
 
     try {
-        // Check if user exists
-        const userCheck = await db.query('SELECT id FROM users WHERE email = $1', [email]);
-        if (userCheck.rows.length > 0) {
-            return sendError(res, 400, 'Email ini sudah terdaftar');
+        const checkUser = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+        if (checkUser.rows.length > 0) {
+            return sendError(res, 400, 'Email sudah terdaftar.');
         }
 
-        // Hash password
         const salt = await bcrypt.genSalt(10);
-        const password_hash = await bcrypt.hash(password, salt);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Insert new user & profile in a transaction
-        await db.query('BEGIN');
-        
-        const insertUserText = `
-            INSERT INTO users(email, password_hash, full_name, auth_provider) 
-            VALUES($1, $2, $3, 'email') RETURNING id, email, full_name, role
-        `;
-        const userResult = await db.query(insertUserText, [email, password_hash, full_name]);
-        const newUser = userResult.rows[0];
-
-        // Create empty profile
-        await db.query('INSERT INTO user_profiles(user_id) VALUES($1)', [newUser.id]);
-        
-        await db.query('COMMIT');
-
-        // Optional: Generate token immediately (auto-login after register)
-        const tokens = generateTokens(newUser);
-
-        // Store refresh token
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await db.query(
-            'INSERT INTO user_sessions(user_id, refresh_token, ip_address, expires_at) VALUES($1, $2, $3, $4)',
-            [newUser.id, tokens.refreshToken, req.ip || null, expiresAt]
+        const newUser = await db.query(
+            'INSERT INTO users (name, email, password_hash, phone) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+            [name, email, hashedPassword, phone]
         );
 
-        sendSuccess(res, 201, 'Pendaftaran berhasil', {
-            user: { id: newUser.id, email: newUser.email, full_name: newUser.full_name },
-            tokens
+        res.status(201).json({
+            success: true,
+            message: 'Registrasi berhasil',
+            data: newUser.rows[0]
         });
 
     } catch (err) {
-        await db.query('ROLLBACK');
-        console.error('Registration error:', err);
-        sendError(res, 500, 'Terjadi kesalahan saat mendaftar');
+        console.error(err);
+        sendError(res, 500, 'Server error');
     }
 });
 
@@ -111,7 +72,7 @@ router.post('/register', async (req, res) => {
  * @swagger
  * /api/auth/login:
  *   post:
- *     summary: Login user with email & password
+ *     summary: Login pengguna
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -129,15 +90,13 @@ router.post('/register', async (req, res) => {
  *                 type: string
  *     responses:
  *       200:
- *         description: Login successful
- *       401:
- *         description: Invalid email or password
+ *         description: Berhasil login
  */
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-        return sendError(res, 400, 'Email dan password wajib diisi');
+        return sendError(res, 400, 'Email dan password wajib diisi.');
     }
 
     try {
@@ -145,118 +104,64 @@ router.post('/login', async (req, res) => {
         const user = userResult.rows[0];
 
         if (!user) {
-            return sendError(res, 401, 'Email atau password salah');
+            return sendError(res, 401, 'Email atau password salah.');
         }
 
-        if (user.auth_provider !== 'email' || !user.password_hash) {
-            return sendError(res, 401, 'Silakan login menggunakan Google');
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+            return sendError(res, 401, 'Email atau password salah.');
         }
 
-        const validPassword = await bcrypt.compare(password, user.password_hash);
-        if (!validPassword) {
-            return sendError(res, 401, 'Email atau password salah');
-        }
+        const payload = {
+            id: user.id,
+            email: user.email,
+            role: user.role
+        };
+        const token = jwt.sign(payload, process.env.JWT_SECRET || 'rahasia123', { expiresIn: '7d' });
 
-        const tokens = generateTokens(user);
-
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await db.query(
-            'INSERT INTO user_sessions(user_id, refresh_token, ip_address, expires_at) VALUES($1, $2, $3, $4)',
-            [user.id, tokens.refreshToken, req.ip || null, expiresAt]
-        );
-
-        sendSuccess(res, 200, 'Login berhasil', {
-            user: { id: user.id, email: user.email, full_name: user.full_name, avatar_url: user.avatar_url },
-            tokens
+        res.json({
+            success: true,
+            message: 'Login berhasil',
+            data: {
+                token,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role
+                }
+            }
         });
-
     } catch (err) {
-        console.error('Login error:', err);
-        sendError(res, 500, 'Terjadi kesalahan saat login');
+        console.error(err);
+        sendError(res, 500, 'Server error');
     }
 });
 
 /**
  * @swagger
- * /api/auth/google:
- *   post:
- *     summary: Login or Register via Google ID Token
+ * /api/auth/me:
+ *   get:
+ *     summary: Mengambil profil pengguna saat ini
  *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - idToken
- *             properties:
- *               idToken:
- *                 type: string
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Authenticated successfully
+ *         description: Data pengguna
  */
-router.post('/google', async (req, res) => {
-    const { idToken } = req.body;
-
-    if (!idToken) {
-        return sendError(res, 400, 'Token ID Google diperlukan');
-    }
-
+router.get('/me', auth, async (req, res) => {
     try {
-        // Validate token with Google
-        const ticket = await googleClient.verifyIdToken({
-            idToken: idToken,
-            audience: process.env.GOOGLE_CLIENT_ID, 
-        });
-        const payload = ticket.getPayload();
+        const userResult = await db.query('SELECT id, name, email, phone, role, created_at FROM users WHERE id = $1', [req.user.id]);
         
-        const email = payload['email'];
-        const full_name = payload['name'];
-        const avatar_url = payload['picture'];
-        const provider_id = payload['sub'];
-
-        // Check if user exists
-        const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        let user = userResult.rows[0];
-
-        if (!user) {
-            // Create new Google User
-            await db.query('BEGIN');
-            
-            const insertUserText = `
-                INSERT INTO users(email, full_name, avatar_url, auth_provider, provider_id, is_email_verified) 
-                VALUES($1, $2, $3, 'google', $4, true) RETURNING id, email, full_name, role, avatar_url
-            `;
-            const newUserResult = await db.query(insertUserText, [email, full_name, avatar_url, provider_id]);
-            user = newUserResult.rows[0];
-
-            await db.query('INSERT INTO user_profiles(user_id) VALUES($1)', [user.id]);
-            await db.query('COMMIT');
-        } else {
-            // Optionally update avatar if changed
-            if (user.avatar_url !== avatar_url) {
-                await db.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatar_url, user.id]);
-            }
+        if (userResult.rows.length === 0) {
+            return sendError(res, 404, 'User tidak ditemukan.');
         }
 
-        const tokens = generateTokens(user);
-
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await db.query(
-            'INSERT INTO user_sessions(user_id, refresh_token, ip_address, expires_at) VALUES($1, $2, $3, $4)',
-            [user.id, tokens.refreshToken, req.ip || null, expiresAt]
-        );
-
-        sendSuccess(res, 200, 'Google Login berhasil', {
-            user: { id: user.id, email: user.email, full_name: user.full_name, avatar_url: user.avatar_url },
-            tokens
-        });
-
+        sendSuccess(res, userResult.rows[0]);
     } catch (err) {
-        console.error('Google Auth error:', err);
-        sendError(res, 401, 'Token Google tidak valid atau kadaluarsa');
+        console.error(err);
+        sendError(res, 500, 'Server error');
     }
 });
 

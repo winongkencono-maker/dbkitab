@@ -314,8 +314,19 @@ router.get('/:id', async (req, res) => {
         if (rows.length === 0) {
             return sendError(res, 404, 'Kitab tidak ditemukan');
         }
+
+        const bookData = rows[0];
+
+        // Fetch physical products linked to this digital book
+        const productsQuery = `
+            SELECT id, title, price, stock, cover_image_url
+            FROM products
+            WHERE linked_book_id = $1
+        `;
+        const productsResult = await db.query(productsQuery, [req.params.id]);
+        bookData.available_physical_products = productsResult.rows;
         
-        sendSuccess(res, 200, 'Berhasil mengambil detail kitab', rows[0]);
+        sendSuccess(res, 200, 'Berhasil mengambil detail kitab', bookData);
     } catch (err) {
         console.error(err);
         sendError(res, 500, 'Terjadi kesalahan pada server');

@@ -95,7 +95,7 @@ async function processBook(book) {
         console.log(`[PROSES] Buku ${bookId} -> Ekstrak Halaman 1...`);
         // Command pdftoppm: -f 1 (halaman pertama), -l 1 (sampai halaman 1), -jpeg (format jpg)
         // Resolusi bisa ditambah -r 150 atau dibiarkan default
-        const cmd = \`pdftoppm -f 1 -l 1 -jpeg -scale-to 800 "\${tmpPdfPath}" "\${outPrefix}"\`;
+        const cmd = `pdftoppm -f 1 -l 1 -jpeg -scale-to 800 "${tmpPdfPath}" "${outPrefix}"`;
         await execAsync(cmd);
 
         if (fs.existsSync(finalJpgPath)) {

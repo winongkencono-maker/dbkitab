@@ -248,6 +248,38 @@ router.get('/shamela/:id/pages', async (req, res) => {
 
 /**
  * @swagger
+ * /api/books/shamela/page/{pageId}:
+ *   get:
+ *     summary: Get specific Shamela Page by page_id
+ *     tags: [Books (Shamela)]
+ *     parameters:
+ *       - in: path
+ *         name: pageId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Berhasil mendapatkan halaman spesifik
+ *       404:
+ *         description: Halaman tidak ditemukan
+ */
+router.get('/shamela/page/:pageId', async (req, res) => {
+    try {
+        const { pageId } = req.params;
+        const response = await axios.get(`${SHAMELA_BASE_URL}/api/pages/${pageId}`);
+        sendSuccess(res, 200, 'Berhasil dari Shamela', response.data);
+    } catch (err) {
+        console.error('Shamela Page Error:', err.message);
+        if (err.response && err.response.status === 404) {
+             return sendError(res, 404, 'Halaman tidak ditemukan');
+        }
+        sendError(res, 500, 'Gagal terhubung ke Shamela API');
+    }
+});
+
+/**
+ * @swagger
  * /api/books/{id}:
  *   get:
  *     summary: Get Book Details

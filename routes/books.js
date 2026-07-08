@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { validate: isUuid } = require('uuid');
 const db = require('../config/db');
 const { sendSuccess, sendError } = require('../utils/response');
 
@@ -154,23 +155,39 @@ router.get('/shamela', async (req, res) => {
 router.get('/shamela/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const response = await axios.get(`${SHAMELA_BASE_URL}/api/books/${id}`);
+        
+        // Cek apakah ID yang dikirim adalah UUID database lokal
+        let originalId = id;
+        if (isUuid(id)) {
+            const { rows } = await db.query('SELECT original_id FROM books WHERE id = $1', [id]);
+            if (rows.length === 0) {
+                return sendError(res, 404, 'Kitab tidak ditemukan di database lokal');
+            }
+            if (!rows[0].original_id) {
+                return sendError(res, 400, 'Kitab ini tidak memiliki original_id');
+            }
+            originalId = rows[0].original_id;
+        }
+
+        const response = await axios.get(`${SHAMELA_BASE_URL}/api/books/${originalId}`);
         const bookData = response.data;
         
         if (!bookData) {
             return sendError(res, 404, 'Kitab Shamela tidak ditemukan');
         }
 
-        // Auto-sync ke tabel lokal (Stub)
-        const localBookId = `shamela-${id}`;
-        const title = bookData.title || `Kitab Shamela ${id}`;
-        const authorId = bookData.author?.id ? `shamela-author-${bookData.author.id}` : null;
-        
-        await db.query(`
-            INSERT INTO books (id, title, source_type, original_id, pages_count, author_id)
-            VALUES ($1, $2, 'shamela', $3, $4, $5)
-            ON CONFLICT (id) DO NOTHING
-        `, [localBookId, title, id, bookData.pages_count || null, authorId]);
+        // Auto-sync ke tabel lokal jika pencarian langsung dari original_id
+        if (!isUuid(id)) {
+            const localBookId = `shamela-${originalId}`;
+            const title = bookData.title || `Kitab Shamela ${originalId}`;
+            const authorId = bookData.author?.id ? `shamela-author-${bookData.author.id}` : null;
+            
+            await db.query(`
+                INSERT INTO books (id, title, source_type, original_id, pages_count, author_id)
+                VALUES ($1, $2, 'shamela', $3, $4, $5)
+                ON CONFLICT (id) DO NOTHING
+            `, [localBookId, title, originalId, bookData.pages_count || null, authorId]);
+        }
 
         sendSuccess(res, 200, 'Berhasil dari Shamela', bookData);
     } catch (err) {
@@ -208,7 +225,20 @@ router.get('/shamela/:id', async (req, res) => {
 router.get('/shamela/:id/pages', async (req, res) => {
     try {
         const { id } = req.params;
-        const response = await axios.get(`${SHAMELA_BASE_URL}/api/books/${id}/pages`, { params: req.query });
+        
+        let originalId = id;
+        if (isUuid(id)) {
+            const { rows } = await db.query('SELECT original_id FROM books WHERE id = $1', [id]);
+            if (rows.length === 0) {
+                return sendError(res, 404, 'Kitab tidak ditemukan di database lokal');
+            }
+            if (!rows[0].original_id) {
+                return sendError(res, 400, 'Kitab ini tidak memiliki original_id');
+            }
+            originalId = rows[0].original_id;
+        }
+
+        const response = await axios.get(`${SHAMELA_BASE_URL}/api/books/${originalId}/pages`, { params: req.query });
         sendSuccess(res, 200, 'Berhasil dari Shamela', response.data);
     } catch (err) {
         console.error('Shamela Pages Error:', err.message);

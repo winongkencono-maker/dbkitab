@@ -61,11 +61,23 @@ async function downloadFile(url, outputPath) {
         const writer = fs.createWriteStream(outputPath);
         response.data.pipe(writer);
         let error = null;
-        writer.on('error', err => {
-            error = err;
-            writer.close();
-            reject(err);
+        
+        response.data.on('error', err => {
+            if (!error) {
+                error = err;
+                writer.close();
+                reject(err);
+            }
         });
+
+        writer.on('error', err => {
+            if (!error) {
+                error = err;
+                writer.close();
+                reject(err);
+            }
+        });
+        
         writer.on('close', () => {
             if (!error) resolve(true);
         });

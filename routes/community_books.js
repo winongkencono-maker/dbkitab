@@ -35,32 +35,33 @@ const upload = multer({ storage: storage });
  *   post:
  *     summary: Upload a new community book
  *     tags: [Community Books]
- *     consumes:
- *       - multipart/form-data
- *     parameters:
- *       - in: formData
- *         name: file
- *         type: file
- *         description: The book file to upload
- *         required: true
- *       - in: formData
- *         name: title
- *         type: string
- *         description: Book title
- *         required: true
- *       - in: formData
- *         name: author
- *         type: string
- *         description: Book author
- *       - in: formData
- *         name: description
- *         type: string
- *         description: Book description
- *       - in: formData
- *         name: user_id
- *         type: string
- *         description: ID of the user uploading the book
- *         required: true
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: The book file to upload
+ *               title:
+ *                 type: string
+ *                 description: Book title
+ *               author:
+ *                 type: string
+ *                 description: Book author
+ *               description:
+ *                 type: string
+ *                 description: Book description
+ *               user_id:
+ *                 type: string
+ *                 description: ID of the user uploading the book
+ *             required:
+ *               - file
+ *               - title
+ *               - user_id
  *     responses:
  *       201:
  *         description: Book uploaded successfully

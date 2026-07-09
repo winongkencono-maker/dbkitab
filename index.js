@@ -14,6 +14,7 @@ const subscriptionsRouter = require('./routes/subscriptions');
 const productsRouter = require('./routes/products');
 const cartRouter = require('./routes/cart');
 const ordersRouter = require('./routes/orders');
+const communityBooksRouter = require('./routes/community_books');
 
 const adminProductsRouter = require('./routes/admin/products');
 const adminOrdersRouter = require('./routes/admin/orders');
@@ -46,6 +47,7 @@ app.use('/api/subscriptions', subscriptionsRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/orders', ordersRouter);
+app.use('/api/community-books', communityBooksRouter);
 
 app.use('/api/admin/products', adminProductsRouter);
 app.use('/api/admin/orders', adminOrdersRouter);
